@@ -1,5 +1,5 @@
-app: 
-  port: 8000
+survey: 
+  port: ":8787"
 
 db: 
   openDriver: "godror"

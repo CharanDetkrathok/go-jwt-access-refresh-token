@@ -35,6 +35,7 @@ func (c *connection) OracleConnection() (*sqlx.DB, error) {
 		driver := "godror"
 	*/
 
+	// PRODUCTION DATABASE CONNECTION 
 	dns := fmt.Sprintf("%v", viper.GetString("db.connection"))
 	driver := viper.GetString("db.openDriver")
 
