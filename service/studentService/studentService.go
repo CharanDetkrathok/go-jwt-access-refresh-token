@@ -4,25 +4,83 @@ package studentService
 import (
 	"fmt"
 	"go-jwt-access-refresh-token/middleware"
+	"go-jwt-access-refresh-token/repository/studentRepository"
 	"net/http"
 )
 
-func (s studentService) Authenticate(std_code string, birth_date string) (*StudentAuthenticationServiceResponse, error) {
+func (s studentService) Authentication(std_code string, birth_date string, lev_id string) (*StudentAuthenticationServiceResponse, error) {
 
-	// ส่ง std_code และ birth_date ไปตรวจสอบใน Database
-	student, err := s.studentRepository.Authenticate(std_code, birth_date)
-	if err != nil {
+	var student *studentRepository.StudentAuthenticationRepositoryFromDB
+	var err error
+	var roleDetail string
 
-		// ถ้าไม่พบข้อมูล ทำการเตรียมโครงสร้างข้อมูลแบบว่างเปล่ากลับไป
-		studentResponseInfomation := studentInfomation{}
-		studentResponse := StudentAuthenticationServiceResponse{
-			studentResponseInfomation,
-			studentToken{AccessToken: "", RefreshToken: "", Authorized: ""},
-			fmt.Sprint(http.StatusNoContent),
-			"รหัสนักษึกษาหรือ วัน/เดือน/ปีเกิด ไม่ถูกต้อง!",
+	switch lev_id {
+	case "1":
+
+		// ส่ง std_code และ birth_date ไปตรวจสอบใน Database
+		student, err = s.studentRepository.AuthenticateBachelor(std_code, birth_date, lev_id)
+		if err != nil {
+
+			// ถ้าไม่พบข้อมูล ทำการเตรียมโครงสร้างข้อมูลแบบว่างเปล่ากลับไป
+			studentResponseInfomation := studentInfomation{}
+			studentResponse := StudentAuthenticationServiceResponse{
+				studentResponseInfomation,
+				studentToken{AccessToken: "", RefreshToken: "", Authorized: ""},
+				fmt.Sprint(http.StatusNoContent),
+				MakeMessage(lev_id),
+				"",
+				"",
+			}
+			return &studentResponse, err
+
 		}
-		return &studentResponse, err
 
+		roleDetail = fmt.Sprint(lev_id, ": บัณฑิต ปริญญาตรี")
+
+	case "2":
+		// ส่ง std_code และ birth_date ไปตรวจสอบใน Database
+		student, err = s.studentRepository.AuthenticateMaster(std_code, birth_date, lev_id)
+		if err != nil {
+
+			// ถ้าไม่พบข้อมูล ทำการเตรียมโครงสร้างข้อมูลแบบว่างเปล่ากลับไป
+			studentResponseInfomation := studentInfomation{}
+			studentResponse := StudentAuthenticationServiceResponse{
+				studentResponseInfomation,
+				studentToken{AccessToken: "", RefreshToken: "", Authorized: ""},
+				fmt.Sprint(http.StatusNoContent),
+				MakeMessage(lev_id),
+				"",
+				"",
+			}
+			return &studentResponse, err
+
+		}
+
+		roleDetail = fmt.Sprint(lev_id, ": บัณฑิตศึกษา ปริญญาโท")
+
+	case "3":
+		// ส่ง std_code และ birth_date ไปตรวจสอบใน Database
+		student, err = s.studentRepository.AuthenticatePhd(std_code, birth_date, lev_id)
+		if err != nil {
+
+			// ถ้าไม่พบข้อมูล ทำการเตรียมโครงสร้างข้อมูลแบบว่างเปล่ากลับไป
+			studentResponseInfomation := studentInfomation{}
+			studentResponse := StudentAuthenticationServiceResponse{
+				studentResponseInfomation,
+				studentToken{AccessToken: "", RefreshToken: "", Authorized: ""},
+				fmt.Sprint(http.StatusNoContent),
+				MakeMessage(lev_id),
+				"",
+				"",
+			}
+			return &studentResponse, err
+
+		}
+
+		roleDetail = fmt.Sprint(lev_id, ": บัณฑิตศึกษา ปริญญาเอก")
+
+	default:
+		roleDetail = "unknown"
 	}
 
 	generateToken, err := middleware.GenerateToken(student.Lev_id, student.Std_code, fmt.Sprint(" - "+student.First_name_thai+" - "+student.First_name_eng))
@@ -50,7 +108,6 @@ func (s studentService) Authenticate(std_code string, birth_date string) (*Stude
 		Last_name_thai:    student.Last_name_thai,
 		Last_name_eng:     student.Last_name_eng,
 		Birth_date:        student.Birth_date,
-		Year_end:          student.Year_end,
 		Faculty_no:        student.Faculty_no,
 		Faculty_name_thai: student.Faculty_name_thai,
 		Faculty_name_eng:  student.Faculty_name_eng,
@@ -65,10 +122,27 @@ func (s studentService) Authenticate(std_code string, birth_date string) (*Stude
 	// เตรียม Infomation และ Token สำหรับ Authorization ของนักศึกษา
 	studentResponse := StudentAuthenticationServiceResponse{
 		studentResponseInfomation,
-		studentToken{AccessToken: studentResponseGenerateToken.AccessToken, RefreshToken: studentResponseGenerateToken.RefreshToken,Authorized: studentResponseGenerateToken.Authorized},
+		studentToken{AccessToken: studentResponseGenerateToken.AccessToken, RefreshToken: studentResponseGenerateToken.RefreshToken, Authorized: studentResponseGenerateToken.Authorized},
 		fmt.Sprint(http.StatusCreated),
 		"Created tokens successfully",
+		student.Lev_id,
+		roleDetail,
 	}
 
 	return &studentResponse, nil
+}
+
+func MakeMessage(lev_id string) string {
+
+	var MessageDetail string
+	switch lev_id {
+	case "1", "2", "3":
+		MessageDetail = "รหัสนักษึกษาหรือ วัน/เดือน/ปีเกิด ไม่ถูกต้อง!"
+	// case "2","3":
+	// 	MessageDetail = "รหัสนักษึกษาหรือ วัน/เดือน/ปีเกิด ไม่ถูกต้อง! กรณีมหาบัณฑิตระดับปริญญาโท และปริญญาเอก กรุณาติดต่อฝ่ายทะเบียนบัณฑิตวิทยาลัยเพื่อ Update ข้อมูลของท่าน เนื่องจากไม่พบรหัสนักษึกษาหรือ วัน/เดือน/ปีเกิด หรือไม่พบข้อมูลคณะหรือหลักสูตรของท่าน"
+	default:
+		MessageDetail = "unknown"
+	}
+
+	return MessageDetail
 }

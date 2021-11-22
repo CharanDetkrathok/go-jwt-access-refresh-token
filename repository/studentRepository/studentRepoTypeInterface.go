@@ -12,8 +12,8 @@ type (
 		First_name_eng    string `db:"FIRST_NAME_ENG"`
 		Last_name_thai    string `db:"LAST_NAME_THAI"`
 		Last_name_eng     string `db:"LAST_NAME_ENG"`
+		Sex               string `db:"SEX"`
 		Birth_date        string `db:"BIRTH_DATE"`
-		Year_end          string `db:"YEAR_END"`
 		Faculty_no        string `db:"FACULTY_NO"`
 		Faculty_name_thai string `db:"FACULTY_NAME_THAI"`
 		Faculty_name_eng  string `db:"FACULTY_NAME_ENG"`
@@ -30,7 +30,9 @@ type (
 	}
 
 	StudentRepository interface {
-		Authenticate(std_code string, birth_date string) (*StudentAuthenticationRepositoryFromDB, error)
+		AuthenticateBachelor(std_code string, birth_date string, lev_id string) (*StudentAuthenticationRepositoryFromDB, error)
+		AuthenticateMaster(std_code string, birth_date string, lev_id string) (*StudentAuthenticationRepositoryFromDB, error)
+		AuthenticatePhd(std_code string, birth_date string, lev_id string) (*StudentAuthenticationRepositoryFromDB, error)
 	}
 )
 

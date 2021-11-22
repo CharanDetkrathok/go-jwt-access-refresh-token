@@ -13,7 +13,6 @@ type (
 		Last_name_thai    string `json:"Last_name_thai"`
 		Last_name_eng     string `json:"Last_name_eng"`
 		Birth_date        string `json:"Birth_date"`
-		Year_end          string `json:"Year_end"`
 		Faculty_no        string `json:"Faculty_no"`
 		Faculty_name_thai string `json:"Faculty_name_thai"`
 		Faculty_name_eng  string `json:"Faculty_name_eng"`
@@ -60,12 +59,14 @@ type (
 		StudentToken studentToken
 		StatusCode   string `json:"status_code"`
 		Message      string `json:"message"`
+		Role         string `json:"role"`
+		RoleDetail   string `json:"role_detail"`
 	}
 
 	StudentAuthenticationServiceRequest struct {
-		Std_code   string `json:"Std_code"`
-		Birth_date string `json:"Birth_date"`
-		Lev_id     string `json:"Lev_id"`
+		Std_code   string `json:"std_code"`
+		Birth_date string `json:"birth_date"`
+		Lev_id     string `json:"lev_id"`
 	}
 
 	studentService struct {
@@ -73,7 +74,7 @@ type (
 	}
 
 	StudentService interface {
-		Authenticate(std_code string, birth_date string) (*StudentAuthenticationServiceResponse, error)
+		Authentication(std_code string, birth_date string, lev_id string) (*StudentAuthenticationServiceResponse, error)
 	}
 )
 

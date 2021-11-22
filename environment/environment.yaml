@@ -26,3 +26,7 @@ rdb:
   address: "127.0.0.1:6379"
   password: "admin-survey"
   db: 0
+
+token: 
+  issuer: "survey"
+  secretKey: "S!U@R#V$E%Y~S!U@R#V$E%Y~S!U@R#V$E%Y"

@@ -31,15 +31,26 @@ func main() {
 
 	newStudnetRepo := studentRepository.NewStudentRepository(db)
 	newStudnetService := studentService.NewStudentService(newStudnetRepo)
-	newStudnetHandler := studentHandler.NewStudentHandler(newStudnetService)
+	newStudentHandler := studentHandler.NewStudentHandler(newStudnetService)
 
 	// Authentication and Authorization
-	auth := router.Group("/student/auth")
+	studentAuthGeneratorRefreshToken := router.Group("/student/auth")
 	{		
-		auth.POST("/authentication", newStudnetHandler.Authentication)
-		// auth.POST("/authorization")
-		// auth.POST("/refresh_authentication")
+		// Genreate token
+		studentAuthGeneratorRefreshToken.POST("/authentication", newStudentHandler.Authentication)
+		// Refresh token
+		// auth.POST("/refresh-authentication")
 	}
+
+	router.Use(middleware.Authorization)
+
+	student := router.Group("/student")
+	{
+		// เอา 1.ข้อคำถาม 2.ข้อคำตอบ-ข้อมูลที่อยู่ หมู่,ตำบล,อำเภอ,จังหวัด ในประเทศ 3.คณะ 4.สาขา หรือหลักสูตร
+		student.GET("/fetch-data", newStudentHandler.FetchData)
+	}
+
+	// router.Use(middleware.AuthorizationMiddleware())
 
 	router.Run(viper.GetString("survey.port"))
 

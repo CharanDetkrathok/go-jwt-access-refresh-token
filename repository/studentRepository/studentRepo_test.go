@@ -13,7 +13,7 @@ func Test(t *testing.T) {
 		panic(err)
 	}
 
-	newRepo, err:= NewStudentRepository(db).Authenticate("6256000792", "11/1/2534")
+	newRepo, err:= NewStudentRepository(db).AuthenticateBachelor("6256000792", "11/1/2534","1")
 	if err != nil {
 		fmt.Println("เกิดข้อผิดพลาด",err)
 		panic(err)

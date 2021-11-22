@@ -8,41 +8,10 @@ import (
 
 	"github.com/dgrijalva/jwt-go/v4"
 	"github.com/google/uuid"
-)
-
-type (
-	TokenAuthMiddlewareResponse struct {
-		AccessToken         string `json:"access_token"`
-		RefreshToken        string `json:"refresh_token"`
-		ExpiresAccessToken  int64  `json:"expires_access_token"`
-		ExpiresRefreshToken int64  `json:"expires_refresh_token"`
-		AccessTokenUUID     string `json:"access_token_uuid"`
-		RefreshTokenUUID    string `json:"refresh_token_uuid"`
-		Authorized          bool   `json:"authorized"`
-	}
-
-	// claims คือข้อมูลที่อยู่ในส่วน Payload ของ Token
-	// -iss (issuer) : เว็บหรือบริษัทเจ้าของ token
-	// -sub (subject) : subject ของ token
-	// -aud (audience) : ผู้รับ token
-	// -exp (expiration time) : เวลาหมดอายุของ token
-	// -nbf (not before) : เป็นเวลาที่บอกว่า token จะเริ่มใช้งานได้เมื่อไหร่
-	// -iat (issued at) : ใช้เก็บเวลาที่ token นี้เกิดปัญหา
-	// -jti (JWT id) : เอาไว้เก็บไอดีของ JWT แต่ละตัวนะครับ
-	// -name (Full name) : เอาไว้เก็บชื่อ
-	ClaimsToken struct {
-		Issuer              string `json:"issuer"`
-		Subject             string `json:"subject"`
-		Role                string `json:"role"`
-		AccessTokenUUID     string `json:"access_token_uuid"`
-		RefreshTokenUUID    string `json:"refresh_token_uuid"`
-		ExpiresAccessToken  string `json:"expires_access_token"`
-		ExpiresRefreshToken string `json:"expiration_refresh_token"`
-	}
+	"github.com/spf13/viper"
 )
 
 var ctx = context.Background()
-var secretKey = "S!U@R#V$E%Y~S!U@R#V$E%Y~S!U@R#V$E%Y"
 
 // Role => สิทธิ์การเข้าถึงข้อมูล (นักศึกษาใช้ level_id : 1=>ป.ตรี, 2=>ป.โท, 3=>ป.เอก )
 // Role => สิทธิ์การเข้าถึงข้อมูล (พนักงาน level_id : ใช้เลข 4 ขึ้นไป )
@@ -50,10 +19,10 @@ func GenerateToken(role string, user string, detail string) (*TokenAuthMiddlewar
 
 	// กำหนด Expiration time และ Universally Unique Identifier
 	generateToken := &TokenAuthMiddlewareResponse{}
-	generateToken.ExpiresAccessToken = time.Now().Add(time.Minute * 30).Unix()
+	generateToken.ExpiresAccessToken = time.Now().Add(time.Minute * 1).Unix()
 	generateToken.AccessTokenUUID = uuid.New().String()
 
-	generateToken.ExpiresRefreshToken = time.Now().Add(time.Hour * 24).Unix()
+	generateToken.ExpiresRefreshToken = time.Now().Add(time.Minute * 2).Unix()
 	generateToken.RefreshTokenUUID = uuid.New().String()
 
 	generateToken.Authorized = true
@@ -61,7 +30,7 @@ func GenerateToken(role string, user string, detail string) (*TokenAuthMiddlewar
 	// ---------------------  Create Access Token  ----------------------------------------- //
 	// กำหนด claims คือข้อมูลที่อยู่ในส่วน Payload ของ Token
 	accessTokenClaims := jwt.MapClaims{}
-	accessTokenClaims["issuer"] = "survey"
+	accessTokenClaims["issuer"] = viper.GetString("token.issuer")
 	accessTokenClaims["subject"] = user + detail
 	accessTokenClaims["role"] = role
 	accessTokenClaims["access_token_uuid"] = generateToken.AccessTokenUUID
@@ -72,7 +41,7 @@ func GenerateToken(role string, user string, detail string) (*TokenAuthMiddlewar
 	accessTokenHeaderAndPayload := jwt.NewWithClaims(jwt.SigningMethodHS256, accessTokenClaims)
 
 	// map claims(payload) และ has algorithm (header) เข้ากับ Signature key
-	NEW_ACCESS_TOKEN, err := accessTokenHeaderAndPayload.SignedString([]byte(secretKey))
+	NEW_ACCESS_TOKEN, err := accessTokenHeaderAndPayload.SignedString([]byte(viper.GetString("token.secretKey")))
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +51,7 @@ func GenerateToken(role string, user string, detail string) (*TokenAuthMiddlewar
 	// ---------------------  Create Refresh Token  ----------------------------------------- //
 	// กำหนด claims คือข้อมูลที่อยู่ในส่วน Payload ของ Token
 	refreshTokenClaims := jwt.MapClaims{}
-	refreshTokenClaims["issuer"] = "survey"
+	refreshTokenClaims["issuer"] = viper.GetString("token.issuer")
 	refreshTokenClaims["subject"] = user + detail
 	refreshTokenClaims["role"] = role
 	refreshTokenClaims["access_token_uuid"] = generateToken.AccessTokenUUID
@@ -93,7 +62,7 @@ func GenerateToken(role string, user string, detail string) (*TokenAuthMiddlewar
 	refreshTokenHeaderAndPayload := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshTokenClaims)
 
 	// map claims(payload) และ has algorithm (header) เข้ากับ Signature key
-	NEW_REFRESH_TOKEN, err := refreshTokenHeaderAndPayload.SignedString([]byte(secretKey))
+	NEW_REFRESH_TOKEN, err := refreshTokenHeaderAndPayload.SignedString([]byte(viper.GetString("token.secretKey")))
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +80,7 @@ func GenerateToken(role string, user string, detail string) (*TokenAuthMiddlewar
 	// convertion Unix to UTC(to time object)
 	redisCacheExpiresAccessToken := time.Unix(generateToken.ExpiresAccessToken, 0)
 	// เก็บ uuid ลง redis cache database โดยใช้ uuid เป็น key และให้ username เป็น value
-	err = redisCache.Set(ctx, fmt.Sprint(user+generateToken.AccessTokenUUID), user+detail, redisCacheExpiresAccessToken.Sub(timeNow)).Err()
+	err = redisCache.Set(ctx, fmt.Sprint(generateToken.AccessTokenUUID), user+detail, redisCacheExpiresAccessToken.Sub(timeNow)).Err()
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +88,7 @@ func GenerateToken(role string, user string, detail string) (*TokenAuthMiddlewar
 	// convertion Unix to UTC(to time object)
 	redisCacheExpiresRefreshToken := time.Unix(generateToken.ExpiresRefreshToken, 0)
 	// เก็บ uuid ลง redis cache database โดยใช้ uuid เป็น key และให้ username เป็น value
-	err = redisCache.Set(ctx, fmt.Sprint(user+generateToken.RefreshTokenUUID), user+detail, redisCacheExpiresRefreshToken.Sub(timeNow)).Err()
+	err = redisCache.Set(ctx, fmt.Sprint(generateToken.RefreshTokenUUID), user+detail, redisCacheExpiresRefreshToken.Sub(timeNow)).Err()
 	if err != nil {
 		return nil, err
 	}
