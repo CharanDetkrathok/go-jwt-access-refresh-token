@@ -16,16 +16,16 @@ var ctx = context.Background()
 // Role => สิทธิ์การเข้าถึงข้อมูล (นักศึกษาใช้ level_id : 1=>ป.ตรี, 2=>ป.โท, 3=>ป.เอก )
 // Role => สิทธิ์การเข้าถึงข้อมูล (พนักงาน level_id : ใช้เลข 4 ขึ้นไป )
 func GenerateToken(role string, user string, detail string) (*TokenAuthMiddlewareResponse, error) {
-
+ 
 	// กำหนด Expiration time และ Universally Unique Identifier
 	generateToken := &TokenAuthMiddlewareResponse{}
-	generateToken.ExpiresAccessToken = time.Now().Add(time.Minute * 1).Unix()
+	generateToken.ExpiresAccessToken = time.Now().Add(time.Minute * 10).Unix()
 	generateToken.AccessTokenUUID = uuid.New().String()
 
-	generateToken.ExpiresRefreshToken = time.Now().Add(time.Minute * 2).Unix()
+	generateToken.ExpiresRefreshToken = time.Now().Add(time.Minute * 30).Unix()
 	generateToken.RefreshTokenUUID = uuid.New().String()
 
-	generateToken.Authorized = true
+	generateToken.Authorized = "true"
 
 	// ---------------------  Create Access Token  ----------------------------------------- //
 	// กำหนด claims คือข้อมูลที่อยู่ในส่วน Payload ของ Token

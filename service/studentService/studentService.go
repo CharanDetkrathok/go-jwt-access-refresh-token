@@ -83,7 +83,7 @@ func (s studentService) Authentication(std_code string, birth_date string, lev_i
 		roleDetail = "unknown"
 	}
 
-	generateToken, err := middleware.GenerateToken(student.Lev_id, student.Std_code, fmt.Sprint(" - "+student.First_name_thai+" - "+student.First_name_eng))
+	generateToken, err := middleware.GenerateToken(lev_id, student.Std_code, fmt.Sprint(" - "+student.First_name_thai+" - "+student.First_name_eng))
 	if err != nil {
 		return nil, err
 	}
@@ -95,6 +95,7 @@ func (s studentService) Authentication(std_code string, birth_date string, lev_i
 		ExpiresRefreshToken: generateToken.ExpiresRefreshToken,
 		AccessTokenUUID:     generateToken.AccessTokenUUID,
 		RefreshTokenUUID:    generateToken.RefreshTokenUUID,
+		Authorized:          generateToken.Authorized,
 	}
 
 	// เก็บข้อมูลที่ได้จากการ Query เพื่อเตรียม Respose
@@ -116,7 +117,7 @@ func (s studentService) Authentication(std_code string, birth_date string, lev_i
 		Major_flag:        student.Major_flag,
 		Major_name_thai:   student.Major_name_thai,
 		Major_name_eng:    student.Major_name_eng,
-		Lev_id:            student.Lev_id,
+		Lev_id:            lev_id,
 	}
 
 	// เตรียม Infomation และ Token สำหรับ Authorization ของนักศึกษา
@@ -125,7 +126,7 @@ func (s studentService) Authentication(std_code string, birth_date string, lev_i
 		studentToken{AccessToken: studentResponseGenerateToken.AccessToken, RefreshToken: studentResponseGenerateToken.RefreshToken, Authorized: studentResponseGenerateToken.Authorized},
 		fmt.Sprint(http.StatusCreated),
 		"Created tokens successfully",
-		student.Lev_id,
+		lev_id,
 		roleDetail,
 	}
 

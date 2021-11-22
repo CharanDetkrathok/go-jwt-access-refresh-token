@@ -39,7 +39,7 @@ func main() {
 		// Genreate token
 		studentAuthGeneratorRefreshToken.POST("/authentication", newStudentHandler.Authentication)
 		// Refresh token
-		// auth.POST("/refresh-authentication")
+		studentAuthGeneratorRefreshToken.POST("/refresh-authentication", middleware.RefreshAuthorization)
 	}
 
 	router.Use(middleware.Authorization)

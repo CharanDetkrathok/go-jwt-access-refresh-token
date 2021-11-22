@@ -17,7 +17,7 @@ func Authorization(c *gin.Context) {
 	// แกะ Bearer ออก เอาแค่เฉพาะ token
 	token, err := getToken(c)
 	if err != nil {
-		c.IndentedJSON(http.StatusUnauthorized, gin.H{"message": err})
+		c.IndentedJSON(http.StatusUnauthorized, errorsHandler.NewUnauthorizedError())
 		c.Abort()
 		return
 	}
@@ -26,7 +26,7 @@ func Authorization(c *gin.Context) {
 	isToken, err := verifyAccessToken(token)
 	if err != nil {
 		fmt.Println(err)
-		c.IndentedJSON(http.StatusUnauthorized, gin.H{"message": err})
+		c.IndentedJSON(http.StatusUnauthorized, errorsHandler.NewUnauthorizedError())
 		c.Abort()
 		return
 	}
@@ -60,9 +60,9 @@ func verifyAccessToken(token string) (bool, error) {
 	rdb := databaseConnection.NewDatabaseConnection().RedisConnection()
 	defer rdb.Close()
 
-	claims, err := getAccessTokenClaims(token)
+	claims, err := getClaims(token)
 	if err != nil {
-		return false, err
+		return false, errorsHandler.NewUnauthorizedError()
 	}
 
 	_, err = rdb.Get(ctx, claims.AccessTokenUUID).Result()
@@ -73,51 +73,122 @@ func verifyAccessToken(token string) (bool, error) {
 	return true, nil
 }
 
-func getAccessTokenClaims(encodedToken string) (*ClaimsToken, error) {
+func getClaims(encodedToken string) (*ClaimsToken, error) {
 
 	parseToken, err := jwt.Parse(encodedToken, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errorsHandler.NewMessageAndStatusCode(http.StatusUnauthorized, fmt.Sprint(token.Header["alg"]))
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		return []byte(viper.GetString("token.secretKey")), nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, errorsHandler.NewUnauthorizedError()
 	}
 
 	claimsToken := &ClaimsToken{}
 	parseClaims := parseToken.Claims.(jwt.MapClaims)
 
-	if len(parseClaims["issuer"].(string)) != 0 {
+	if parseClaims["issuer"] != nil {
 		claimsToken.Issuer = parseClaims["issuer"].(string)
 	}
 
-	if len(parseClaims["subject"].(string)) != 0 {
+	if parseClaims["subject"] != nil {
 		claimsToken.Subject = parseClaims["subject"].(string)
 	}
 
-	if len(parseClaims["role"].(string)) != 0 {
+	if parseClaims["role"] != nil {
 		claimsToken.Role = parseClaims["role"].(string)
 	}
 
-	if len(parseClaims["access_token_uuid"].(string)) != 0 {
+	if parseClaims["access_token_uuid"] != nil {
 		claimsToken.AccessTokenUUID = parseClaims["access_token_uuid"].(string)
 	}
 
-	if len(parseClaims["refresh_token_uuid"].(string)) != 0 {
+	if parseClaims["refresh_token_uuid"] != nil {
 		claimsToken.RefreshTokenUUID = parseClaims["refresh_token_uuid"].(string)
 	}
 
-	if len(parseClaims["expiration_time"].(string)) != 0 {
-		claimsToken.ExpiresAccessToken = parseClaims["expiration_time"].(string)
+	return claimsToken, nil
+}
+
+func RefreshAuthorization(c *gin.Context) {
+
+	mapRefreshToken := map[string]string{} 
+	if err := c.ShouldBindJSON(&mapRefreshToken); err != nil {
+		c.IndentedJSON(http.StatusUnprocessableEntity, errorsHandler.NewMessageAndStatusCode(http.StatusUnprocessableEntity, "กรุณา Sign-in เพื่อเข้าสู่ระบบใหม่"))
+		return
 	}
 
-	fmt.Println(parseToken)
+	Std_code := mapRefreshToken["std_code"]
+	First_name_thai := mapRefreshToken["first_name_thai"]
+	First_name_eng := mapRefreshToken["first_name_eng"]
+	Lev_id := mapRefreshToken["lev_id"]
+	Refresh_token := mapRefreshToken["refresh_token"]
 
-	fmt.Println(parseToken)
+	_, err := verifyRefreshToken(Refresh_token)
+	if err != nil {
+		c.IndentedJSON(http.StatusUnprocessableEntity, errorsHandler.NewMessageAndStatusCode(http.StatusUnprocessableEntity, "กรุณา Sign-in เพื่อเข้าสู่ระบบใหม่"))
+		return
+	}
 
-	fmt.Println(parseToken)
+	claimsDetail, err := getClaims(Refresh_token)
+	if err != nil {
+		c.IndentedJSON(http.StatusUnprocessableEntity, errorsHandler.NewMessageAndStatusCode(http.StatusUnprocessableEntity, "กรุณา Sign-in เพื่อเข้าสู่ระบบใหม่"))
+		return
+	}
 
+	newToken, err := GenerateToken(Lev_id, Std_code, fmt.Sprint(" - "+First_name_thai+" - "+First_name_eng))
+	if err != nil {
+		c.IndentedJSON(http.StatusUnprocessableEntity, errorsHandler.NewMessageAndStatusCode(http.StatusUnprocessableEntity, "กรุณา Sign-in เพื่อเข้าสู่ระบบใหม่"))
+		return
+	}
 
-	return claimsToken, nil
+	isRevokeTokenFromRedisCache, err := revokeToken(claimsDetail.AccessTokenUUID,claimsDetail.RefreshTokenUUID)
+	if err != nil {
+		c.IndentedJSON(http.StatusUnprocessableEntity, errorsHandler.NewMessageAndStatusCode(http.StatusUnprocessableEntity, "กรุณา Sign-in เพื่อเข้าสู่ระบบใหม่"))
+		return
+	}
+
+	responseNewToken := TokenAuthMiddlewareResponse {
+		AccessToken:        newToken.AccessToken,
+		RefreshToken:        newToken.RefreshToken,
+		ExpiresAccessToken:  0,
+		ExpiresRefreshToken: 0,
+		AccessTokenUUID:     "",
+		RefreshTokenUUID:    "",
+		Authorized:          "true",
+	}
+
+	if isRevokeTokenFromRedisCache {
+		c.IndentedJSON(http.StatusCreated, responseNewToken)
+	}	
+
+}
+
+func verifyRefreshToken(refreshToken string) (bool, error) {
+
+	rdb := databaseConnection.NewDatabaseConnection().RedisConnection()
+	defer rdb.Close()
+
+	claimsRefresh, err := getClaims(refreshToken)
+	if err != nil {
+		return false, err
+	}
+
+	_, err = rdb.Get(ctx, claimsRefresh.RefreshTokenUUID).Result()
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func revokeToken(accessTokenUUID string, refreshTokenUUID string) (bool, error) {
+
+	rdb := databaseConnection.NewDatabaseConnection().RedisConnection()
+	defer rdb.Close()
+
+	rdb.Del(ctx,fmt.Sprint(accessTokenUUID), fmt.Sprint(refreshTokenUUID))
+
+	return true, nil
 }

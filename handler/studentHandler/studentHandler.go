@@ -48,17 +48,17 @@ func (s studentHandler) FetchData(c *gin.Context) {
 	switch requestBoby.Lev_id {
 
 	case "1":
-		c.IndentedJSON(http.StatusUnauthorized, errorsHandler.NewMessageAndStatusCode(http.StatusUnauthorized, "ป.ตรี"))
+		c.IndentedJSON(http.StatusOK, errorsHandler.NewMessageAndStatusCode(http.StatusOK, "ป.ตรี"))
 		return
 	case "2":
-		c.IndentedJSON(http.StatusUnauthorized, errorsHandler.NewMessageAndStatusCode(http.StatusUnauthorized, "ป.โท"))
+		c.IndentedJSON(http.StatusOK, errorsHandler.NewMessageAndStatusCode(http.StatusOK, "ป.โท"))
 		return
 	case "3":
-		c.IndentedJSON(http.StatusUnauthorized, errorsHandler.NewMessageAndStatusCode(http.StatusUnauthorized, "ป.เอก") )
+		c.IndentedJSON(http.StatusOK, errorsHandler.NewMessageAndStatusCode(http.StatusOK, "ป.เอก") )
 		return
 
 	default:
-		c.IndentedJSON(http.StatusBadRequest, errorsHandler.NewMessageAndStatusCode(http.StatusBadRequest, "User นี้ไม่มีสิทธิ์เข้าถึงข้อมูล!"))
+		c.IndentedJSON(http.StatusOK, errorsHandler.NewMessageAndStatusCode(http.StatusOK, "User นี้ไม่มีสิทธิ์เข้าถึงข้อมูล!"))
 		return
 	}	
 	

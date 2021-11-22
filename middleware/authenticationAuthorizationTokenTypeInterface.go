@@ -8,7 +8,7 @@ type (
 		ExpiresRefreshToken int64  `json:"expires_refresh_token"`
 		AccessTokenUUID     string `json:"access_token_uuid"`
 		RefreshTokenUUID    string `json:"refresh_token_uuid"`
-		Authorized          bool   `json:"authorized"`
+		Authorized          string `json:"authorized"`
 	}
 
 	// claims คือข้อมูลที่อยู่ในส่วน Payload ของ Token
