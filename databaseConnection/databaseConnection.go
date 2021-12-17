@@ -29,12 +29,6 @@ func (c *connection) RedisConnection() *redis.Client {
 
 func (c *connection) OracleConnection() (*sqlx.DB, error) {
 
-	/*
-		// สำหรับ RUN TEST
-		dns := `user="scenter01" password="scenter01new" connectString="10.2.1.98:1571/RUBRAM?expire_timconnect_time=2" timezone="local"`
-		driver := "godror"
-	*/
-
 	// PRODUCTION DATABASE CONNECTION 
 	dns := fmt.Sprintf("%v", viper.GetString("db.connection"))
 	driver := viper.GetString("db.openDriver")
