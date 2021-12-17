@@ -4,9 +4,9 @@ survey:
 db: 
   openDriver: "godror"
   connection: 
-    "user=\"scenter01\" 
-     password=\"scenter01new\" 
-     connectString=\"10.2.1.98:1571/RUBRAM?expire_timconnect_time=2\"
+    "user=\"user\" 
+     password=\"pass\" 
+     connectString=\"db?expire_timconnect_time=2\"
      sysdba=0
      sysoper=0
      poolMinSessions=1
@@ -24,9 +24,9 @@ db:
 
 rdb:
   address: "127.0.0.1:6379"
-  password: "admin-survey"
+  password: ""
   db: 0
 
 token: 
-  issuer: "survey"
-  secretKey: "S!U@R#V$E%Y~S!U@R#V$E%Y~S!U@R#V$E%Y"
+  issuer: ""
+  secretKey: ""
