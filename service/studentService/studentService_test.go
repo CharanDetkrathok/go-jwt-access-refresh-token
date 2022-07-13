@@ -17,7 +17,7 @@ func Test(t *testing.T) {
 	newRepo := studentRepository.NewStudentRepository(db)
 	newService := NewStudentService(newRepo)
 
-	resultServiceResponse, err := newService.Authentication("6256000792", "11/1/2534","1")
+	resultServiceResponse, err := newService.Authentication("xxx", "xxx","xxx")
 	if err != nil {
 		fmt.Println("เกิดข้อผิดพลาด", err)
 		panic(err)
